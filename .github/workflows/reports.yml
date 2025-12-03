@@ -1,14 +1,44 @@
 name: generating_pdf_reports
+
 on: push
+
 jobs:
   pdf_report:
     runs-on: ubuntu-22.04
+    env:
+      MPLBACKEND: Agg
     steps:
-      - run: sudo apt-get update
-      - run: sudo apt-get install inkscape pandoc texlive-xetex
       - uses: actions/checkout@v4
-      - run: pip install ipykernel nbconvert mpl_toolkits pint open-atmos-jupyter-utils scipy pandas PyMPDATA
-      - run: python -m nbconvert --to pdf --execute Projekt_MUP2.ipynb 
-      - uses: actions/upload-artifact@v4
+
+      - name: Install system deps (LaTeX + pandoc + inkscape)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            pandoc latexmk inkscape \
+            texlive-xetex texlive-fonts-recommended \
+            texlive-latex-recommended texlive-latex-extra \
+            texlive-fonts-extra lmodern ghostscript
+
+      - uses: actions/setup-python@v5
         with:
-          path: ProjektMUP2.pdf
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Python deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install nbconvert jupyter numpy scipy pandas matplotlib pint open-atmos-jupyter-utils PyMPDATA
+
+      - name: Execute notebook & export to PDF (LaTeX)
+        run: |
+          jupyter nbconvert \
+            --to pdf \
+            --execute "Projekt_MUP2.ipynb" \
+            --ExecutePreprocessor.timeout=1800 \
+            --output "Projekt_MUP2.pdf"
+
+      - name: Upload PDF artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Projekt_MUP2
+          path: Projekt_MUP2.pdf
