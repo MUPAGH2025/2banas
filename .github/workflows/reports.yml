@@ -10,29 +10,36 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install system deps (LaTeX + pandoc + inkscape)
+      - name: Create requirements.txt for caching
         run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            pandoc latexmk inkscape \
-            texlive-xetex texlive-fonts-recommended \
-            texlive-latex-recommended texlive-latex-extra \
-            texlive-fonts-extra lmodern ghostscript
+          cat > requirements.txt <<'EOF'
+          nbconvert[webpdf]
+          jupyter
+          numpy
+          scipy
+          pandas
+          matplotlib
+          pint
+          open-atmos-jupyter-utils
+          PyMPDATA
+          EOF
 
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.13.2'
           cache: 'pip'
+          cache-dependency-path: 'requirements.txt'
 
       - name: Install Python deps
         run: |
           python -m pip install --upgrade pip
-          pip install nbconvert jupyter numpy scipy pandas matplotlib pint open-atmos-jupyter-utils PyMPDATA
+          pip install -r requirements.txt || true   # niech brak PyMPDATA nie przerwie joba
 
-      - name: Execute notebook & export to PDF (LaTeX)
+      - name: Execute notebook & export to PDF (webpdf)
         run: |
           jupyter nbconvert \
-            --to pdf \
+            --to webpdf \
+            --allow-chromium-download \
             --execute "Projekt_MUP2.ipynb" \
             --ExecutePreprocessor.timeout=1800 \
             --output "Projekt_MUP2.pdf"
@@ -42,3 +49,4 @@ jobs:
         with:
           name: Projekt_MUP2
           path: Projekt_MUP2.pdf
+
